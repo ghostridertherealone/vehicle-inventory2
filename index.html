@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vehicle Inventory</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="page-layout">
+    <aside class="sidebar">
+      <div id="selected-models">
+        <!-- Selected models content -->
+      </div>
+
+      <div class="sidebar-controls">
+        <div class="sort-panel">
+          <div class="sort-options">
+            <div class="sort-group">
+              <label for="price-sort">Price Sort:</label>
+              <select id="price-sort" onchange="filterVehicles()">
+                <option value="">--Select Price Sort--</option>
+                <option value="low-high">Price (Low to High)</option>
+                <option value="high-low">Price (High to Low)</option>
+              </select>
+            </div>
+            <div class="sort-group">
+              <label for="year-sort">Year Sort:</label>
+              <select id="year-sort" onchange="filterVehicles()">
+                <option value="">--Select Year Sort--</option>
+                <option value="new-old">Year (Newest to Oldest)</option>
+                <option value="old-new">Year (Oldest to Newest)</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      
+        <div class="filter-panel">
+          <div class="year-mileage-filters">
+            <div class="year-range">
+              <label for="year-min">Year Range:</label>
+              <div class="range-inputs">
+                <input type="number" id="year-min" placeholder="From" min="1900" max="2024">
+                <span>to</span>
+                <input type="number" id="year-max" placeholder="To" min="1900" max="2024">
+              </div>
+            </div>
+            
+            <div class="mileage-range">
+              <label for="mileage-min">Mileage Range (km):</label>
+              <div class="range-inputs">
+                <input type="number" id="mileage-min" placeholder="From" min="0">
+                <span>to</span>
+                <input type="number" id="mileage-max" placeholder="To" min="0">
+              </div>
+            </div>
+            <div class="price-range">
+              <label>Price Range (R)</label>
+              <div class="range-inputs">
+                <input type="number" id="price-min" placeholder="Min">
+                <span>to</span>
+                <input type="number" id="price-max" placeholder="Max">
+              </div>
+            </div>
+            <div class="condition-filter">
+              <label>Condition</label>
+              <select id="condition-filter">
+                <option value="">All</option>
+                <option value="A">A</option>
+                <option value="B">B</option>
+              </select>
+            </div>          
+            <div class="filter-actions">
+              <button id="apply-filters" class="filter-button">Apply</button>
+              <button id="clear-filters" class="filter-button">Clear</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+    </aside>
+
+    <main class="main-content">
+      <div class="header-container">
+        <h1>Vehicle Inventory</h1>
+        <div class="navigation-toggle">
+          <input type="checkbox" id="page-toggle" class="toggle-input">
+          <label for="page-toggle" class="toggle-label">
+            <span class="inventory">Inventory</span>
+            <span class="predictor">Predictor</span>
+            <span class="slider"></span>
+          </label>
+        </div>
+      </div>
+
+      <div class="database-selection">
+        <div class="toggle-switch">
+          <input type="checkbox" id="database-toggle" class="toggle-input">
+          <label for="database-toggle" class="toggle-label">
+            <span class="car">Cars</span>
+            <span class="motorcycle">Motorcycles</span>
+            <span class="slider"></span>
+          </label>
+        </div>
+      </div>
+
+      <div class="filters">
+        <div class="make-model-options">
+          <label for="make">Make:</label>
+          <select id="make" aria-label="Select vehicle make">
+            <option value="">--Select Make--</option>
+          </select>
+          
+          <label for="model">Model:</label>
+          <select id="model" aria-label="Select vehicle model">
+            <option value="">--Select Model--</option>
+          </select>
+        </div>
+      </div>
+      
+      <div id="summary"></div>
+      <div class="vehicle-list" id="vehicle-list"></div>
+    </main>
+  </div>
+
+  <div class="page-transition"></div>
+  <script type="module" src="script.js"></script>
+</body>
+</html>

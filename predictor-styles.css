@@ -1,0 +1,199 @@
+/* Updated CSS for fade transitions */
+.page-transition {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: #001f3f;
+    visibility: hidden;
+    opacity: 0;
+    z-index: 9999;
+    transition: opacity 0.2s ease, visibility 0.2s ease;
+  }
+  
+  .page-transition.active {
+    visibility: visible;
+    opacity: 1;
+  }
+  
+  /* Add initial state for content fade in */
+  body {
+    opacity: 0;
+    animation: fadeIn 0.2s ease-in forwards;
+  }
+  
+  @keyframes fadeIn {
+    0% {
+      opacity: 0;
+    }
+    100% {
+      opacity: 1;
+    }
+  }
+.header-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 30px;
+  margin-bottom: 20px;
+}
+
+.header-container h1 {
+  margin-bottom: 0;
+}
+
+.navigation-toggle .toggle-label {
+  width: 180px;
+  padding: 5px;
+  background-color: rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  position: relative;
+}
+
+.navigation-toggle .inventory,
+.navigation-toggle .predictor {
+  z-index: 1;
+  padding: 0 15px;
+  color: white;
+  transition: color 0.3s ease;
+}
+
+.navigation-toggle .slider {
+  position: absolute;
+  left: 3px;
+  height: 30px;
+  background-color: #a39d94;
+  border-radius: 6px;
+  transition: all 0.3s ease;
+  z-index: 0;
+}
+
+.navigation-toggle .toggle-input:not(:checked) + .toggle-label .slider {
+  width: 85px;
+  transform: translateX(102px);
+}
+
+.navigation-toggle .toggle-input:checked + .toggle-label .slider {
+  width: 85px;
+}
+
+.navigation-toggle .toggle-input:checked + .toggle-label .predictor {
+  color: rgb(136, 134, 134);
+}
+
+.navigation-toggle .toggle-input:not(:checked) + .toggle-label .predictor {
+  color: rgb(255, 255, 255);
+}
+
+.navigation-toggle .toggle-input:checked + .toggle-label .inventory {
+  color: rgb(255, 255, 255);
+}
+
+.navigation-toggle .toggle-input:not(:checked) + .toggle-label .inventory {
+  color: rgb(164, 145, 145);
+}
+
+
+
+
+.predictor-container {
+    max-width: 800px;
+    margin: 30px auto;
+    padding: 20px;
+}
+
+.predictor-form {
+    background-color: rgba(255, 255, 255, 0.1);
+    padding: 30px;
+    border-radius: 8px;
+    margin-bottom: 30px;
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    display: block;
+    color: #ffffff;
+    margin-bottom: 8px;
+    font-size: 1rem;
+}
+
+.form-group select,
+.form-group input {
+    width: 100%;
+    padding: 10px;
+    border: none;
+    border-radius: 4px;
+    background-color: #f9f9f9;
+    font-size: 1rem;
+}
+
+#predict-button {
+    width: 100%;
+    padding: 12px;
+    background-color: #a39d94;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 1.1rem;
+    transition: background-color 0.3s ease;
+}
+
+#predict-button:hover {
+    background-color: #a39d94;
+}
+
+.prediction-results {
+    background-color: rgba(255, 255, 255, 0.1);
+    padding: 30px;
+    border-radius: 8px;
+    text-align: center;
+}
+
+.prediction-results h2 {
+    color: #a39d94;
+    margin-bottom: 20px;
+}
+
+.results-content {
+    color: #ffffff;
+}
+
+#price-range {
+    font-size: 1.5rem;
+    margin-bottom: 15px;
+}
+
+#confidence-level {
+    color: #e2b537;
+    font-size: 1.1rem;
+    margin-bottom: 10px;
+}
+
+#data-points {
+    font-size: 0.9rem;
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.hidden {
+    display: none;
+}
+
+@media (max-width: 768px) {
+    .predictor-container {
+        padding: 10px;
+    }
+
+    .predictor-form {
+        padding: 20px;
+    }
+
+    .form-group select,
+    .form-group input {
+        font-size: 0.9rem;
+    }
+}
