@@ -1,25 +1,40 @@
 let vehicles = [];
 let predictor;
-let currentDatabase = 'bikes';
+let currentDatabase = 'motorcycles';
 
-// Initialize the page
 async function loadDatabaseData(database) {
     try {
-        const filename = database === 'bikes' ? 'motorcycles.json' : 'cars.json';
-        const response = await fetch(filename);
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+        console.log("Starting database load for:", database);
+        
+        predictor = new window.CloudPricePredictor();
+        const success = await predictor.initialize(database);
+        
+        if (!success) {
+            console.error('Failed to initialize predictor');
+            throw new Error('Failed to initialize predictor');
         }
-        vehicles = await response.json();
-        predictor = new PricePredictor(vehicles);
+
+        vehicles = predictor.vehicles;
+        console.log("Loaded vehicles:", vehicles.length);
         
         updateMakeOptions();
+        
+        const modelSelect = document.getElementById("model");
+        if (modelSelect) {
+            modelSelect.innerHTML = '<option value="">--Select Model--</option>';
+        }
+        
+        const predictionDiv = document.getElementById('price-prediction');
+        if (predictionDiv) {
+            predictionDiv.innerHTML = '';
+        }
+        
     } catch (error) {
         console.error('Error loading vehicle data:', error);
+        console.log("Error stack:", error.stack);
         alert('Error loading vehicle data. Please try again later.');
     }
 }
-
 function updateMakeOptions() {
     const makeSelect = document.getElementById("make");
     makeSelect.innerHTML = '<option value="">--Select Make--</option>';
@@ -32,7 +47,6 @@ function updateMakeOptions() {
         makeSelect.appendChild(option);
     });
 }
-
 function updateModelOptions() {
     const makeSelect = document.getElementById("make");
     const modelSelect = document.getElementById("model");
@@ -62,80 +76,224 @@ function getPrediction() {
     const year = parseInt(document.getElementById('year').value);
     const mileage = parseInt(document.getElementById('mileage').value);
 
-    // Validate inputs
-    if (!make || !model || !year || !mileage) {
-        alert('Please fill in all fields');
+    if (!make || !model || !year || isNaN(year) || !mileage || isNaN(mileage)) {
+        alert('Please fill in all fields with valid numbers');
         return;
     }
 
-    const result = predictor.predict(make, model, year, mileage);
-    displayResults(result);
+    predictor.currentPrediction = { make, model, year, mileage };
+    const rangeResult = predictor.predict(make, model, year, mileage);
+    displayResults(rangeResult);
 }
 
-function displayResults(result) {
-    const resultsDiv = document.getElementById('prediction-results');
-    const priceRangeDiv = document.getElementById('price-range');
-    const confidenceDiv = document.getElementById('confidence-level');
-    const dataPointsDiv = document.getElementById('data-points');
+function displayResults(rangeResult) {
+    const predictionDiv = document.getElementById('price-prediction');
+    
+    if (!rangeResult || rangeResult.confidence === "insufficient_data") {
+        predictionDiv.innerHTML = `
+            <div class="fade-in">
+                <div class="prediction-header">Insufficient data for prediction</div>
+            </div>`;
+        return;
+    }
 
-    if (result.confidence === "insufficient_data") {
-        priceRangeDiv.innerHTML = "Insufficient data for prediction";
-        confidenceDiv.innerHTML = "";
-        dataPointsDiv.innerHTML = `Based on ${result.dataPoints} similar vehicles`;
+    const nearestMatch = predictor.findNearestMatch(
+        predictor.currentPrediction.make,
+        predictor.currentPrediction.model,
+        predictor.currentPrediction.year,
+        predictor.currentPrediction.mileage
+    );
+
+    let nearestMatchHtml = '';
+    if (nearestMatch) {
+        const mileageDiff = Math.abs(
+            predictor.getMileageValue(nearestMatch.vehicle["Mileage (km)"]) - 
+            predictor.currentPrediction.mileage
+        );
+        const yearDiff = Math.abs(nearestMatch.vehicle.Year - predictor.currentPrediction.year);
+        
+        nearestMatchHtml = `
+            <div class="nearest-match">
+                <div class="nearest-match-header">Nearest Match:</div>
+                <div class="nearest-match-details">
+                    <div class="match-stat">Year: ${nearestMatch.vehicle.Year} 
+                        ${yearDiff ? `(${yearDiff} year ${nearestMatch.vehicle.Year > predictor.currentPrediction.year ? 'newer' : 'older'})` : '(same year)'}
+                    </div>
+                    <div class="match-stat">Mileage: ${predictor.getMileageValue(nearestMatch.vehicle["Mileage (km)"]).toLocaleString()} km 
+                        (±${mileageDiff.toLocaleString()} km)
+                    </div>
+                    <div class="match-stat">Price: R${nearestMatch.vehicle.Price.toLocaleString()}</div>
+                </div>
+            </div>`;
     } else {
-        priceRangeDiv.innerHTML = `
-            Estimated Price Range:<br>
-            R ${result.priceRange.low.toLocaleString()} - R ${result.priceRange.high.toLocaleString()}
-        `;
-        confidenceDiv.innerHTML = `Confidence Level: ${result.confidence.charAt(0).toUpperCase() + result.confidence.slice(1)}`;
-        dataPointsDiv.innerHTML = `Based on ${result.dataPoints} similar vehicles`;
+        nearestMatchHtml = `
+            <div class="nearest-match">
+                <div class="nearest-match-header">No Close Matches Found</div>
+                <div class="nearest-match-details">
+                    No vehicles found within:
+                    <ul>
+                        <li>Same year (±2,000 km)</li>
+                        <li>Previous year (±4,000 km)</li>
+                        <li>Next year (±2,000 km)</li>
+                    </ul>
+                </div>
+            </div>`;
+    }
+
+    predictionDiv.innerHTML = `
+        <div class="fade-in">
+            <div class="prediction-header">
+                R${rangeResult.priceRange.low.toLocaleString()} - R${rangeResult.priceRange.high.toLocaleString()}
+            </div>
+            <div class="prediction-subtext">
+                <div class="confidence ${rangeResult.confidence}">
+                    Confidence: ${rangeResult.confidence}
+                </div>
+                <div class="similar-vehicles-toggle">
+                    Based on ${rangeResult.dataPoints} similar vehicles
+                </div>
+            </div>
+            <div class="similar-vehicles-content hidden">
+                <div class="sort-info"></div>
+                <table class="similar-vehicles">
+                    <thead>
+                        <tr>
+                            <th class="sortable" data-column="Year">Year</th>
+                            <th class="sortable" data-column="Mileage">Mileage</th>
+                            <th class="sortable" data-column="Price">Price</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+            ${nearestMatchHtml}
+        </div>`;
+
+    const sortState = { column: 'Price', direction: 'asc' };
+    const toggle = predictionDiv.querySelector('.similar-vehicles-toggle');
+    const content = predictionDiv.querySelector('.similar-vehicles-content');
+    
+    toggle.addEventListener('click', () => {
+        content.classList.toggle('hidden');
+    });
+
+    const headers = predictionDiv.querySelectorAll('.sortable');
+    headers.forEach(header => {
+        header.addEventListener('click', () => {
+            const column = header.dataset.column;
+            if (sortState.column === column) {
+                sortState.direction = sortState.direction === 'asc' ? 'desc' : 'asc';
+            } else {
+                sortState.column = column;
+                sortState.direction = 'asc';
+            }
+            updateTableContent();
+        });
+    });
+
+    function updateTableContent() {
+        const sortedVehicles = [...rangeResult.similarVehicles].sort((a, b) => {
+            let aValue = sortState.column === 'Mileage' ? 
+                predictor.getMileageValue(a["Mileage (km)"]) : 
+                a[sortState.column === 'Year' ? 'Year' : 'Price'];
+            let bValue = sortState.column === 'Mileage' ? 
+                predictor.getMileageValue(b["Mileage (km)"]) : 
+                b[sortState.column === 'Year' ? 'Year' : 'Price'];
+            
+            return sortState.direction === 'asc' ? aValue - bValue : bValue - aValue;
+        });
+
+        const directionText = sortState.direction === 'asc' ? 'Low to High' : 'High to Low';
+        predictionDiv.querySelector('.sort-info').textContent = 
+            `Sort: ${sortState.column} (${directionText})`;
+        
+        predictionDiv.querySelector('tbody').innerHTML = sortedVehicles.map(v => `
+            <tr>
+                <td>${v.Year}</td>
+                <td>${predictor.getMileageValue(v["Mileage (km)"]).toLocaleString()} km</td>
+                <td>R${v.Price.toLocaleString()}</td>
+            </tr>
+        `).join('');
+    }
+
+    updateTableContent();
+
+    predictionDiv.querySelectorAll('.sortable')('.sortable').forEach(header => {
+        header.addEventListener('click', () => {
+            const column = header.dataset.column;
+            if (sortState.column === column) {
+                sortState.direction = sortState.direction === 'asc' ? 'desc' : 'asc';
+            } else {
+                sortState.column = column;
+                sortState.direction = 'asc';
+            }
+            updateTableContent();
+        });
+    });
+
+    updateTableContent();
+
+    if (exactResult && exactResult.price) {
+        document.getElementById('exact-price').textContent = 
+            `R${exactResult.price.toLocaleString()}`;
+        document.getElementById('exact-confidence').textContent = `Confidence: ${exactResult.confidence}`;
+        document.getElementById('exact-confidence').className = `confidence ${exactResult.confidence}`;
+        document.getElementById('match-type').textContent = 
+            exactResult.matchType === 'exact' ? 'Based on exact match' : 'Based on similar vehicles';
+    } else {
+        document.getElementById('exact-price').textContent = "No exact match found";
+        document.getElementById('exact-confidence').textContent = "";
+        document.getElementById('match-type').textContent = "";
     }
 
     resultsDiv.classList.remove('hidden');
+
+    predictionDiv.querySelector('.collapsible').addEventListener('click', function() {
+        this.classList.toggle('active');
+        const content = this.nextElementSibling;
+        content.classList.toggle('hidden');
+    });
 }
 
-// Event Listeners
 document.addEventListener('DOMContentLoaded', function() {
-    // Set current year as default
-    document.getElementById('year').value = new Date().getFullYear();
-    
-    // Initialize database
-    loadDatabaseData('bikes');
-    
-    // Add event listeners
+    updateYearOptions();
+    loadDatabaseData('motorcycles');
     document.getElementById('make').addEventListener('change', updateModelOptions);
     document.getElementById('database-toggle').addEventListener('change', (event) => {
-        const database = event.target.checked ? 'cars' : 'bikes';
+        const database = event.target.checked ? 'cars' : 'motorcycles';
         currentDatabase = database;
         loadDatabaseData(database);
     });
 });
+
 document.getElementById('page-toggle').addEventListener('change', function() {
     const transition = document.querySelector('.page-transition');
     transition.classList.add('active');
     
     setTimeout(() => {
-      if (!this.checked) {
-        window.location.href = 'prediction.html';
-      } else {
-        window.location.href = 'index.html';
-      }
-    }, 500); // Wait for fade out before navigation
-  });
-  
-  // Enhanced page load handling
-  document.addEventListener('DOMContentLoaded', function() {
-    // Set initial toggle state
+        window.location.href = this.checked ? 'index.html' : 'prediction.html';
+    }, 500);
+});
+
+document.addEventListener('DOMContentLoaded', function() {
     const pageToggle = document.getElementById('page-toggle');
     pageToggle.checked = window.location.pathname.includes('index.html') || 
                         window.location.pathname.endsWith('/');
     
-    // Handle transition overlay
     const transition = document.querySelector('.page-transition');
     if (transition.classList.contains('active')) {
-      // Ensure overlay is removed after page content starts fading in
-      setTimeout(() => {
-        transition.classList.remove('active');
-      }, 100);
+        setTimeout(() => transition.classList.remove('active'), 100);
     }
-  });
+});
+
+function updateYearOptions() {
+    const yearSelect = document.getElementById("year");
+    yearSelect.innerHTML = '<option value="">--Select Year--</option>';
+    
+    for (let year = 2025; year >= 1900; year--) {
+        const option = document.createElement("option");
+        option.value = year;
+        option.textContent = year;
+        yearSelect.appendChild(option);
+    }
+}

@@ -135,7 +135,7 @@ export const manufacturerThemes = {
             textColor: '#ffffff'
           },
           TRIUMPH: {
-            background: '#000000',  // Black
+            background: '#1C1C1C',  // Black
             hoverBackground: '#333333',
             textColor: '#ffffff'
           },
@@ -190,7 +190,7 @@ export const manufacturerThemes = {
             textColor: '#ffffff'
           },
           ASTON_MARTIN: {
-            background: '#005F3D',  // Racing green
+            background: '#355E3B',  // Racing green
             hoverBackground: '#004D31',
             textColor: '#ffffff'
           },
@@ -220,7 +220,7 @@ export const manufacturerThemes = {
             textColor: '#ffffff'
           },
           BMW: {
-            background: '#000000',  // BMW blue
+            background: '#1C1C1C',  // BMW blue
             hoverBackground: '#0653B6',
             textColor: '#ffffff'
           },
@@ -455,7 +455,7 @@ export const manufacturerThemes = {
             textColor: '#ffffff'
           },
           PORSCHE: {
-            background: '#000000',  // Black
+            background: '#A1A1A1',  // Black
             hoverBackground: '#333333',
             textColor: '#ffffff'
           },
@@ -474,6 +474,11 @@ export const manufacturerThemes = {
             hoverBackground: '#4D0000',
             textColor: '#ffffff'
           },
+          MERCEDES_MAYBACH: {
+            background: '#000000',  // Orange
+            hoverBackground: '#CC6600',
+            textColor: '#ffffff'
+          },
           SMART: {
             background: '#FF7F00',  // Orange
             hoverBackground: '#CC6600',
@@ -490,12 +495,17 @@ export const manufacturerThemes = {
             textColor: '#ffffff'
           },
           SUZUKI: {
-            background: '#003399',  // Suzuki blue
+            background: '#007AC4',  // Suzuki blue
             hoverBackground: '#002266',
             textColor: '#ffffff'
           },
           TATA: {
             background: '#13244e',  // Blue
+            hoverBackground: '#1E44A0',
+            textColor: '#ffffff'
+          },
+          ROLLS_ROYCE: {
+            background: '#464646',  // Blue
             hoverBackground: '#1E44A0',
             textColor: '#ffffff'
           },
@@ -509,6 +519,26 @@ export const manufacturerThemes = {
             hoverBackground: '#001336',
             textColor: '#ffffff'
           },
+          FERRARI: {
+            background: '#D40000',  // VW blue
+            hoverBackground: '#001336',
+            textColor: '#ffffff'
+          },
+          LAMBORGHINI: {
+            background: '#1C1C1C',  // VW blue
+            hoverBackground: '#001336',
+            textColor: '#000000'
+          },
+          MERCEDES_AMG: {
+            background: '#E8BE4B',  // VW blue
+            hoverBackground: '#001336',
+            textColor: '#ffffff'
+          },
+          SHELBY: {
+            background: '#003366',  // VW blue
+            hoverBackground: '#001336',
+            textColor: '#ffffff'
+          },
           VOLVO: {
             background: '#003057',  // Volvo blue
             hoverBackground: '#002041',
@@ -519,6 +549,8 @@ export const manufacturerThemes = {
         
         export const manufacturerCountries = {
           ABARTH: 'ITALY',
+          SHELBY: 'USA',
+          ROLLS_ROYCE: 'UK',
           AC: 'UK',
           AEON: 'TAIWAN',
           ALFA_ROMEO: 'ITALY',
@@ -546,6 +578,8 @@ export const manufacturerThemes = {
           DODGE: 'USA',
           DUCATI: 'ITALY',
           FAW: 'CHINA',
+          FERRARI: 'ITALY',
+          MERCEDES_AMG: 'GERMANY',
           FIAT: 'ITALY',
           FORD: 'USA',
           FOTON: 'CHINA',
@@ -581,6 +615,7 @@ export const manufacturerThemes = {
           LIFAN: 'CHINA',
           LOTUS: 'UK',
           MAHINDRA: 'INDIA',
+          LAMBORGHINI: 'ITALY',
           MASERATI: 'ITALY',
           MAZDA: 'JAPAN',
           MERCEDES_BENZ: 'GERMANY',
@@ -621,5 +656,136 @@ export const manufacturerThemes = {
           X_MOTO: 'CHINA',
           YAMAHA: 'JAPAN',
           ZIPPER: 'AUSTRIA',
-          ZONTES: 'CHINA'
+          ZONTES: 'CHINA',
+          MERCEDES_MAYBACH: 'GERMANY',
         };
+
+
+        export const modelYearRanges = {
+          BMW: {
+            'S SERIES S 1000 RR': [
+              { range: '2009-2011', models: ['S SERIES S 1000 RR'] },
+              { range: '2012-2013', models: ['S SERIES S 1000 RR'] },
+              { range: '2014-2018', models: ['S SERIES S 1000 RR'] },
+              { range: '2019-2026', models: ['S SERIES S 1000 RR'] },
+            ],
+            'HP4 Race': [
+              { range: '2017-2023', models: ['S SERIES S 1000 RR'] },
+            ],
+            'S SERIES M 1000 RR': [
+              { range: '2021-2026', models: ['S SERIES M 1000 RR'] },
+            ],
+            'HP4 HP4 COMPETITION': [
+              { range: '2013-2018', models: ['HP4 HP4 COMPETITION'] },
+            ],
+          },
+          YAMAHA: {
+            'YZF R1 YZF R1': [
+              { range: '1998-1999', models: ['YZF R1 YZF R1'] },
+              { range: '2000-2001', models: ['YZF R1 YZF R1'] },
+              { range: '2002-2003', models: ['YZF R1 YZF R1'] },
+              { range: '2004-2005', models: ['YZF R1 YZF R1'] },
+              { range: '2006', models: ['YZF R1 YZF R1'] },
+              { range: '2007-2008', models: ['YZF R1 YZF R1'] },
+              { range: '2009-2014', models: ['YZF R1 YZF R1'] },
+              { range: '2015-2024', models: ['YZF R1 YZF R1'] },
+            ],
+            'YZF R1M YZF R1M': [
+              { range: '2015-2024', models: ['YZF R1M YZF R1M'] },
+            ],
+            'YZF R6 YZF R6': [
+              { range: '1999-2002', models: ['YZF R6 YZF R6'] },
+              { range: '2003-2005', models: ['YZF R6 YZF R6'] },
+              { range: '2006-2016', models: ['YZF R6 YZF R6'] },
+              { range: '2017-2021', models: ['YZF R6 YZF R6'] },
+            ]
+          },
+          SUZUKI: {
+            'GSX-R GSX-R1000': [
+              { range: '2001-2002', models: ['GSX-R GSX-R1000'] },
+              { range: '2003-2004', models: ['GSX-R GSX-R1000'] },
+              { range: '2005-2006', models: ['GSX-R GSX-R1000'] },
+              { range: '2007-2016', models: ['GSX-R GSX-R1000'] },
+              { range: '2017-2025', models: ['GSX-R GSX-R1000'] },
+            ],
+            'GSX-R GSX-R1300R HAYABUSA': [
+              { range: '1999-2007', models: ['GSX-R GSX-R1000'] },
+              { range: '2008-2020', models: ['GSX-R GSX-R1000'] },
+              { range: '2021-2026', models: ['GSX-R GSX-R1000'] },
+            ],
+            'GSX-R GSX-R600': [
+              { range: '1997-2000', models: ['GSX-R GSX-R600'] },
+              { range: '2001-2003', models: ['GSX-R GSX-R600'] },
+              { range: '2004-2005', models: ['GSX-R GSX-R600'] },
+              { range: '2006-2007', models: ['GSX-R GSX-R600'] },
+              { range: '2008-2010', models: ['GSX-R GSX-R600'] },
+              { range: '2011-2026', models: ['GSX-R GSX-R600'] }
+            ]
+            
+          },
+          KAWASAKI: {
+            'ZX-10R': [
+              { range: '2004-2005', models: ['ZX-10R'] },
+              { range: '2006-2007', models: ['ZX-10R'] },
+              { range: '2008', models: ['ZX-10R'] },
+              { range: '2009', models: ['ZX-10R'] },
+              { range: '2010', models: ['ZX-10R'] },
+              { range: '2011-2019', models: ['ZX-10R'] },
+              { range: '2020-2026', models: ['ZX-10R'] }
+            ],
+            'ZX-10R 30TH ANNIVERSARY EDITION': [
+              { range: '2011-2019', models: ['ZX-10R 30TH ANNIVERSARY EDITION'] },
+            ],
+            'ZX-10R WINTER EDITION': [
+              { range: '2011-2019', models: ['ZX-10R WINTER EDITION'] },
+            ],
+            'ZX-6R': [
+              { range: '1995-1997', models: ['ZX-6R'] },
+              { range: '1998-1999', models: ['ZX-6R'] },
+              { range: '2000-2002', models: ['ZX-6R'] },
+              { range: '2003-2004', models: ['ZX-6R'] },
+              { range: '2005-2006', models: ['ZX-6R'] },
+              { range: '2007-2008', models: ['ZX-6R'] },
+              { range: '2009-2012', models: ['ZX-6R'] },
+              { range: '2013-2018', models: ['ZX-6R'] },
+              { range: '2019-2024', models: ['ZX-6R'] },
+            ]
+          },
+          HONDA: {
+            'CBR 1000RR': [
+              { range: '2004-2005', models: ['CBR 1000RR'] },
+              { range: '2006-2007', models: ['CBR 1000RR'] },
+              { range: '2008-2011', models: ['CBR 1000RR'] },
+              { range: '2012-2016', models: ['CBR 1000RR'] },
+              { range: '2017-2019', models: ['CBR 1000RR'] },
+              { range: '2020-2026', models: ['CBR 1000RR'] },
+            ],
+            'CBR 1000RR-R FIREBLADE SP': [
+              { range: '2014-2019', models: ['CBR 1000RR'] },
+              { range: '2020-2026', models: ['CBR 1000RR'] },
+            ],
+            'CBR 600RR': [
+              { range: '2003-2004', models: ['CBR 600RR'] },
+              { range: '2005-2006', models: ['CBR 600RR'] },
+              { range: '2007-2008', models: ['CBR 600RR'] },
+              { range: '2009-2012', models: ['CBR 600RR'] },
+              { range: '2013-2021', models: ['CBR 600RR'] },
+              { range: '2024-2026', models: ['CBR 600RR'] },
+            ]
+          }
+        };
+        
+        function findModelYearRange(manufacturer, model, year) {
+          const manufacturerModels = modelYearRanges[manufacturer];
+          if (!manufacturerModels) return null;
+        
+          const modelRanges = manufacturerModels[model];
+          if (!modelRanges) return null;
+        
+          return modelRanges.find(range => {
+            const [start, end] = range.range.split('-').map(Number);
+            return year >= start && year <= end;
+          });
+        }
+        
+        export { findModelYearRange };

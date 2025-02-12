@@ -5,12 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Vehicle Inventory</title>
   <link rel="stylesheet" href="styles.css">
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 </head>
 <body>
   <div class="page-layout">
     <aside class="sidebar">
       <div id="selected-models">
-        <!-- Selected models content -->
       </div>
 
       <div class="sidebar-controls">
@@ -30,6 +31,14 @@
                 <option value="">--Select Year Sort--</option>
                 <option value="new-old">Year (Newest to Oldest)</option>
                 <option value="old-new">Year (Oldest to Newest)</option>
+              </select>
+            </div>
+            <div class="sort-group">
+              <label for="mileage-sort">Mileage Sort:</label>
+              <select id="mileage-sort" onchange="filterVehicles()">
+                <option value="">--Select Mileage Sort--</option>
+                <option value="low-high">Mileage (Low to High)</option>
+                <option value="high-low">Mileage (High to Low)</option>
               </select>
             </div>
           </div>
@@ -61,15 +70,7 @@
                 <span>to</span>
                 <input type="number" id="price-max" placeholder="Max">
               </div>
-            </div>
-            <div class="condition-filter">
-              <label>Condition</label>
-              <select id="condition-filter">
-                <option value="">All</option>
-                <option value="A">A</option>
-                <option value="B">B</option>
-              </select>
-            </div>          
+            </div>       
             <div class="filter-actions">
               <button id="apply-filters" class="filter-button">Apply</button>
               <button id="clear-filters" class="filter-button">Clear</button>
@@ -82,7 +83,10 @@
 
     <main class="main-content">
       <div class="header-container">
-        <h1>Vehicle Inventory</h1>
+        <div class="search-container">
+          <input type="text" class="search-input" placeholder="Search by make or model...">
+          <div class="search-results"></div>
+        </div>
         <div class="navigation-toggle">
           <input type="checkbox" id="page-toggle" class="toggle-input">
           <label for="page-toggle" class="toggle-label">
@@ -91,9 +95,6 @@
             <span class="slider"></span>
           </label>
         </div>
-      </div>
-
-      <div class="database-selection">
         <div class="toggle-switch">
           <input type="checkbox" id="database-toggle" class="toggle-input">
           <label for="database-toggle" class="toggle-label">
@@ -104,26 +105,27 @@
         </div>
       </div>
 
-      <div class="filters">
-        <div class="make-model-options">
-          <label for="make">Make:</label>
-          <select id="make" aria-label="Select vehicle make">
-            <option value="">--Select Make--</option>
-          </select>
-          
-          <label for="model">Model:</label>
-          <select id="model" aria-label="Select vehicle model">
-            <option value="">--Select Model--</option>
-          </select>
-        </div>
+      <div class="database-selection">
+
       </div>
-      
-      <div id="summary"></div>
       <div class="vehicle-list" id="vehicle-list"></div>
     </main>
   </div>
 
   <div class="page-transition"></div>
+  <script>
+const firebaseConfig = {
+  apiKey: "AIzaSyDZkmi7vcHUBhVAFUUsYzpkgsasn_cjURQ",
+  authDomain: "vehicle-api-448509.firebaseapp.com",
+  projectId: "vehicle-api-448509",
+  storageBucket: "vehicle-api-448509.firebasestorage.app",
+  messagingSenderId: "25669789058",
+  appId: "1:25669789058:web:0dfef7716b9201621e5b9b",
+  measurementId: "G-P5700P1SC4"
+};
+    firebase.initializeApp(firebaseConfig);
+    window.db = firebase.firestore();
+    </script>
   <script type="module" src="script.js"></script>
 </body>
 </html>

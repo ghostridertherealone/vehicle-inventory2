@@ -6,22 +6,19 @@
     <title>Vehicle Price Predictor</title>
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="predictor-styles.css">
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 </head>
 <body>
     <div class="header-container">
-        <h1>Vehicle Price Predictor</h1>
         <div class="navigation-toggle">
-          <input type="checkbox" id="page-toggle" class="toggle-input">
-          <label for="page-toggle" class="toggle-label">
-            <span class="inventory">Inventory</span>
-            <span class="predictor">Predictor</span>
-            <span class="slider"></span>
-          </label>
+            <input type="checkbox" id="page-toggle" class="toggle-input">
+            <label for="page-toggle" class="toggle-label">
+                <span class="inventory">Inventory</span>
+                <span class="predictor">Predictor</span>
+                <span class="slider"></span>
+            </label>
         </div>
-      </div>
-
-    <!-- Database Toggle -->
-    <div class="database-selection">
         <div class="toggle-switch">
             <input type="checkbox" id="database-toggle" class="toggle-input">
             <label for="database-toggle" class="toggle-label">
@@ -32,47 +29,55 @@
         </div>
     </div>
 
-    <!-- Prediction Form -->
     <div class="predictor-container">
         <div class="predictor-form">
-            <div class="form-group">
-                <label for="make">Select Make:</label>
-                <select id="make" required>
-                    <option value="">--Select Make--</option>
-                </select>
-            </div>
+            <div class="form-inputs">
+                <div class="form-group">
+                    <label for="make">Select Make:</label>
+                    <select id="make" required>
+                        <option value="">--Select Make--</option>
+                    </select>
+                </div>
 
-            <div class="form-group">
-                <label for="model">Select Model:</label>
-                <select id="model" required>
-                    <option value="">--Select Model--</option>
-                </select>
-            </div>
+                <div class="form-group">
+                    <label for="model">Select Model:</label>
+                    <select id="model" required>
+                        <option value="">--Select Model--</option>
+                    </select>
+                </div>
 
-            <div class="form-group">
-                <label for="year">Vehicle Year:</label>
-                <input type="number" id="year" min="1990" max="2024" required>
-            </div>
+                <div class="form-group">
+                    <label for="year">Vehicle Year:</label>
+                    <select id="year" required>
+                        <option value="">--Select Year--</option>
+                    </select>
+                </div>
 
-            <div class="form-group">
-                <label for="mileage">Mileage (km):</label>
-                <input type="number" id="mileage" min="0" required>
-            </div>
+                <div class="form-group">
+                    <label for="mileage">Mileage (km):</label>
+                    <input type="number" id="mileage" min="0" required>
+                </div>
 
-            <button id="predict-button" onclick="getPrediction()">Get Price Prediction</button>
-        </div>
-
-        <!-- Results Section -->
-        <div id="prediction-results" class="prediction-results hidden">
-            <h2>Price Prediction Results</h2>
-            <div class="results-content">
-                <div id="price-range"></div>
-                <div id="confidence-level"></div>
-                <div id="data-points"></div>
+                <button id="predict-button" onclick="getPrediction()">Get Price Prediction</button>
             </div>
+            
+            <div id="price-prediction"></div>
         </div>
     </div>
-
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyDZkmi7vcHUBhVAFUUsYzpkgsasn_cjURQ",
+            authDomain: "vehicle-api-448509.firebaseapp.com",
+            projectId: "vehicle-api-448509",
+            storageBucket: "vehicle-api-448509.firebasestorage.app",
+            messagingSenderId: "25669789058",
+            appId: "1:25669789058:web:0dfef7716b9201621e5b9b",
+            measurementId: "G-P5700P1SC4"
+        };
+        
+        firebase.initializeApp(firebaseConfig);
+        window.db = firebase.firestore();
+        </script>
     <script src="predictor-algorithm.js"></script>
     <script src="predictor.js"></script>
     <div class="page-transition"></div>

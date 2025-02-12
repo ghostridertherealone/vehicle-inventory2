@@ -1,42 +1,136 @@
-class PricePredictor {
-    constructor(vehicles) {
-        this.vehicles = vehicles;
+const COLLECTION_NAME = 'asd32';
+
+class CloudPricePredictor {
+    constructor() {
+        this.vehicles = [];
+        this.currentPrediction = null;
+    }
+
+    async initialize(database = 'motorcycles') {
+        try {
+            const vehiclesRef = db.collection(COLLECTION_NAME);
+            const q = vehiclesRef.where('filename', '==', database);
+            const querySnapshot = await q.get();
+            
+            this.vehicles = [];
+            
+            querySnapshot.forEach((doc) => {
+                const vehicleData = doc.data();
+                
+                if (!vehicleData || !vehicleData.data || !Array.isArray(vehicleData.data)) {
+                    console.warn(`Invalid document structure for doc ${doc.id}`);
+                    return;
+                }
+                
+                vehicleData.data.forEach((vehicle, index) => {
+                    if (!vehicle) {
+                        console.log(`Warning: Empty vehicle at index ${index}`);
+                        return;
+                    }
+                    
+                    const processedVehicle = {
+                        Manufacturer: vehicle.Manufacturer || '',
+                        Model: vehicle.Model || '',
+                        Year: vehicle.Year || '',
+                        Price: typeof vehicle.Price === 'number' ? vehicle.Price : 
+                               parseInt(vehicle.Price) || 0,
+                        "Mileage (km)": vehicle.Mileage || 'UNVERIFIED',
+                        Condition: vehicle.Condition || ''
+                    };
+                    
+                    this.vehicles.push(processedVehicle);
+                });
+            });
+            
+            console.log(`Loaded ${this.vehicles.length} vehicles from database`);
+            return this.vehicles.length > 0;
+        } catch (error) {
+            console.error('Error initializing predictor:', error);
+            throw error;
+        }
     }
 
     predict(targetMake, targetModel, targetYear, targetMileage) {
-        const similarVehicles = this.vehicles.filter(vehicle => 
-            vehicle.Manufacturer === targetMake && 
-            vehicle.Model === targetModel &&
-            vehicle.Price && 
-            vehicle["Mileage (km)"] && 
-            vehicle["Mileage (km)"] !== "UNVERIFIED"
-        );
+        const similarVehicles = this.getSimilarVehicles(targetMake, targetModel, targetYear, targetMileage, this.vehicles);
 
-        if (similarVehicles.length < 3) {
+        if (similarVehicles.length < 2) {
             return {
                 predictedPrice: null,
                 confidence: "insufficient_data",
-                message: "Not enough data for accurate prediction",
+                message: "Not enough similar vehicles found for accurate prediction",
                 dataPoints: similarVehicles.length
             };
         }
 
-        const basePrice = this.calculateBasePrice(similarVehicles, targetYear, targetMileage);
-        const yearAdjustment = this.calculateYearAdjustment(similarVehicles, targetYear, basePrice);
-        const mileageAdjustment = this.calculateMileageAdjustment(similarVehicles, targetMileage, basePrice);
-
-        let predictedPrice = basePrice + yearAdjustment - mileageAdjustment;
-        predictedPrice = this.applyPriceBounds(predictedPrice, basePrice);
-
-        const { confidence, range } = this.calculateConfidence(similarVehicles.length);
-        const priceRange = this.calculatePriceRange(predictedPrice, range);
+        const isVintageLowMileage = this.isVintageLowMileage(targetYear, targetMileage);
+        const { weightedPrice, averageScore } = this.calculateWeightedPrice(similarVehicles, targetYear, targetMileage, isVintageLowMileage);
+        const { confidence, range } = this.calculateConfidence(similarVehicles.length, averageScore, isVintageLowMileage);
+        const priceRange = this.calculatePriceRange(weightedPrice, similarVehicles, targetMake, targetModel, targetYear, targetMileage, isVintageLowMileage);
 
         return {
-            predictedPrice: Math.round(predictedPrice),
+            predictedPrice: Math.round(weightedPrice),
             confidence,
             priceRange,
-            dataPoints: similarVehicles.length
+            dataPoints: similarVehicles.length,
+            isVintageLowMileage,
+            similarVehicles
         };
+    }
+
+    calculatePriceRange(price, similarVehicles, targetMake, targetModel, targetYear, targetMileage, isVintageLowMileage) {
+        if (similarVehicles.length < 3) {
+            return {
+                low: Math.round(price * 0.8),
+                high: Math.round(price * 1.2)
+            };
+        }
+
+        const prices = similarVehicles.map(v => v.Price).sort((a, b) => a - b);
+        const lowIndex = Math.floor(prices.length * 0.1);
+        const highIndex = Math.floor(prices.length * 0.9);
+
+        return {
+            low: prices[lowIndex],
+            high: prices[highIndex]
+        };
+    }
+
+    getSimilarVehicles(targetMake, targetModel, targetYear, targetMileage, vehicles) {
+        const matchingVehicles = vehicles.filter(vehicle => 
+            vehicle.Manufacturer === targetMake && 
+            vehicle.Model === targetModel &&
+            vehicle.Price && 
+            vehicle["Mileage (km)"] && 
+            vehicle["Mileage (km)"] !== "UNVERIFIED" &&
+            Math.abs(vehicle.Year - targetYear) <= 2 && 
+            Math.abs(this.getMileageValue(vehicle["Mileage (km)"]) - targetMileage) <= 15000
+        );
+
+        const isVintage = (new Date().getFullYear() - targetYear) > 10;
+        const yearThreshold = isVintage ? 3 : 2;
+
+        const mileageRangeVehicles = this.filterByMileageRange(matchingVehicles, targetMileage, isVintage);
+
+        return mileageRangeVehicles.filter(vehicle => 
+            Math.abs(vehicle.Year - targetYear) <= yearThreshold
+        );
+    }
+
+    filterByMileageRange(vehicles, targetMileage, isVintage) {
+        let mileageThreshold;
+        
+        if (isVintage) {
+            mileageThreshold = targetMileage < 20000 ? 25000 : 30000;
+        } else {
+            if (targetMileage < 10000) mileageThreshold = 8000;
+            else if (targetMileage < 30000) mileageThreshold = 15000;
+            else if (targetMileage < 50000) mileageThreshold = 20000;
+            else mileageThreshold = 30000;
+        }
+
+        return vehicles.filter(vehicle => 
+            Math.abs(this.getMileageValue(vehicle["Mileage (km)"]) - targetMileage) <= mileageThreshold
+        );
     }
 
     getMileageValue(mileage) {
@@ -47,60 +141,105 @@ class PricePredictor {
         return 0;
     }
 
-    calculateBasePrice(vehicles, targetYear, targetMileage) {
-        const weightedPrices = vehicles.map(vehicle => {
-            const yearDiff = Math.abs(vehicle.Year - targetYear);
-            const mileageDiff = Math.abs(this.getMileageValue(vehicle["Mileage (km)"]) - targetMileage);
-            const similarity = 1 / (1 + yearDiff * 0.05 + mileageDiff * 0.00001);
-            return vehicle.Price * similarity;
-        });
+    isVintageLowMileage(year, mileage) {
+        const currentYear = new Date().getFullYear();
+        const age = currentYear - year;
+        const avgYearlyMileage = mileage / age;
+        return age > 10 && avgYearlyMileage < 3000;
+    }
+
+    calculateWeightedPrice(vehicles, targetYear, targetMileage, isVintageLowMileage) {
+        const weights = [];
+        const totalScores = [];
+
+        for (const vehicle of vehicles) {
+            const yearScore = this.calculateYearSimilarity(vehicle.Year, targetYear, isVintageLowMileage);
+            const mileageScore = this.calculateMileageSimilarity(this.getMileageValue(vehicle["Mileage (km)"]), targetMileage, isVintageLowMileage);
+            const similarityScore = Math.sqrt(yearScore * mileageScore);
+            
+            weights.push(similarityScore * vehicle.Price);
+            totalScores.push(similarityScore);
+        }
+
+        const weightedPrice = weights.reduce((a, b) => a + b, 0) / totalScores.reduce((a, b) => a + b, 0);
+        const averageScore = totalScores.reduce((a, b) => a + b, 0) / totalScores.length;
+
+        return { weightedPrice, averageScore };
+    }
+
+    calculateYearSimilarity(vehicleYear, targetYear, isVintageLowMileage) {
+        const yearDiff = Math.abs(vehicleYear - targetYear);
+        const baseDecay = isVintageLowMileage ? 0.3 : 0.5;
+        return Math.exp(-yearDiff * baseDecay);
+    }
+
+    calculateMileageSimilarity(vehicleMileage, targetMileage, isVintageLowMileage) {
+        const mileageDiff = Math.abs(vehicleMileage - targetMileage);
+        let mileageImpact;
         
-        return weightedPrices.reduce((a, b) => a + b, 0) / weightedPrices.length;
+        if (isVintageLowMileage) {
+            mileageImpact = mileageDiff * 0.0002;
+        } else if (targetMileage < 20000) {
+            mileageImpact = mileageDiff * 0.00015;
+        } else if (targetMileage < 50000) {
+            mileageImpact = mileageDiff * 0.0001;
+        } else {
+            mileageImpact = mileageDiff * 0.00005;
+        }
+
+        return Math.exp(-mileageImpact);
+    }
+    findNearestMatch(make, model, year, mileage) {
+        const matchingVehicles = this.vehicles.filter(v => 
+            v.Manufacturer === make && 
+            v.Model === model &&
+            v["Mileage (km)"] !== "UNVERIFIED"
+        );
+
+        if (!matchingVehicles.length) return null;
+
+        return matchingVehicles.reduce((nearest, vehicle) => {
+            const currentMileageDiff = Math.abs(this.getMileageValue(vehicle["Mileage (km)"]) - mileage);
+            const currentYearDiff = Math.abs(vehicle.Year - year);
+            
+            if (!nearest.vehicle) return { vehicle, score: currentYearDiff + (currentMileageDiff / 10000) };
+            
+            const nearestMileageDiff = Math.abs(this.getMileageValue(nearest.vehicle["Mileage (km)"]) - mileage);
+            const nearestYearDiff = Math.abs(nearest.vehicle.Year - year);
+            
+            const currentScore = currentYearDiff + (currentMileageDiff / 10000);
+            const nearestScore = nearestYearDiff + (nearestMileageDiff / 10000);
+            
+            return currentScore < nearestScore ? { vehicle, score: currentScore } : nearest;
+        }, { vehicle: null, score: Infinity });
     }
 
-    calculateYearAdjustment(vehicles, targetYear, basePrice) {
-        const averageYear = vehicles.reduce((sum, vehicle) => sum + vehicle.Year, 0) / vehicles.length;
-        const yearDiff = targetYear - averageYear;
-        // Reduced year impact from 5% to 2% per year
-        return yearDiff * (basePrice * 0.02);
-    }
-
-    calculateMileageAdjustment(vehicles, targetMileage, basePrice) {
-        const averageMileage = vehicles.reduce((sum, vehicle) => 
-            sum + this.getMileageValue(vehicle["Mileage (km)"]), 0) / vehicles.length;
-        const mileageDiff = targetMileage - averageMileage;
-        // Reduced mileage impact and removed division by 1000
-        return mileageDiff * (basePrice * 0.00002);
-    }
-
-    applyPriceBounds(price, basePrice) {
-        // Changed bounds to be more conservative: 70% to 130% of base price
-        const minPrice = basePrice * 0.7;
-        const maxPrice = basePrice * 1.3;
-        return Math.max(minPrice, Math.min(maxPrice, price));
-    }
-
-    calculateConfidence(dataPoints) {
+    calculateConfidence(dataPoints, averageSimilarity, isVintageLowMileage) {
         let confidence, range;
         
-        if (dataPoints >= 10) {
-            confidence = "high";
-            range = 0.15;
-        } else if (dataPoints >= 5) {
-            confidence = "medium";
-            range = 0.25;
+        if (isVintageLowMileage) {
+            if (dataPoints >= 5 && averageSimilarity >= 0.8) {
+                confidence = "medium";
+                range = 0.20;
+            } else {
+                confidence = "low";
+                range = 0.25;
+            }
         } else {
-            confidence = "low";
-            range = 0.35;
+            if (dataPoints >= 8 && averageSimilarity >= 0.8) {
+                confidence = "high";
+                range = 0.10;
+            } else if (dataPoints >= 5 && averageSimilarity >= 0.6) {
+                confidence = "medium";
+                range = 0.15;
+            } else {
+                confidence = "low";
+                range = 0.20;
+            }
         }
 
         return { confidence, range };
     }
-
-    calculatePriceRange(price, range) {
-        return {
-            low: Math.round(price * (1 - range)),
-            high: Math.round(price * (1 + range))
-        };
-    }
 }
+
+window.CloudPricePredictor = CloudPricePredictor;
