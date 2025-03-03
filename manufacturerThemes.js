@@ -9,12 +9,22 @@ export const manufacturerThemes = {
           hoverBackground: '#A01216',
           textColor: '#ffffff'
         },
+        BAJAJ: {
+          background: '#15489a',
+          hoverBackground: '#CC0000',
+          textColor: '#ffffff'
+        },
         BETA_RACING: {
           background: '#FF0000',  // Beta red
           hoverBackground: '#CC0000',
           textColor: '#ffffff'
         },
         BIG_BOY: {
+          background: '#1A1A1A',  // Black
+          hoverBackground: '#000000',
+          textColor: '#ffffff'
+        },
+        BOMBARDIERCANAM: {
           background: '#1A1A1A',  // Black
           hoverBackground: '#000000',
           textColor: '#ffffff'
@@ -559,11 +569,14 @@ export const manufacturerThemes = {
           AUDI: 'GERMANY',
           AUTOVILLA: 'ITALY',
           BAIC: 'CHINA',
+          BAJAJ: 'INDIA',
           BEAMISH: 'SOUTH_AFRICA',
           BENTLEY: 'UK',
+          BAW: 'CHINA',
           BETA_RACING: 'ITALY',
           BIG_BOY: 'SOUTH_AFRICA',
           BMW: 'GERMANY',
+          BOMBARDIERCANAM: 'CANADA',
           BUELL: 'USA',
           CADILLAC: 'USA',
           CHERY: 'CHINA',
@@ -616,6 +629,7 @@ export const manufacturerThemes = {
           LOTUS: 'UK',
           MAHINDRA: 'INDIA',
           LAMBORGHINI: 'ITALY',
+          LANCIA: 'ITALY',
           MASERATI: 'ITALY',
           MAZDA: 'JAPAN',
           MERCEDES_BENZ: 'GERMANY',
@@ -628,6 +642,7 @@ export const manufacturerThemes = {
           MORRIS: 'UK',
           MV_AGUSTA: 'ITALY',
           NISSAN: 'JAPAN',
+          NOBLE: 'UK',
           OPEL: 'GERMANY',
           PEUGEOT: 'FRANCE',
           PORSCHE: 'GERMANY',
@@ -664,8 +679,7 @@ export const manufacturerThemes = {
         export const modelYearRanges = {
           BMW: {
             'S SERIES S 1000 RR': [
-              { range: '2009-2011', models: ['S SERIES S 1000 RR'] },
-              { range: '2012-2013', models: ['S SERIES S 1000 RR'] },
+              { range: '2009-2013', models: ['S SERIES S 1000 RR'] },
               { range: '2014-2018', models: ['S SERIES S 1000 RR'] },
               { range: '2019-2026', models: ['S SERIES S 1000 RR'] },
             ],
