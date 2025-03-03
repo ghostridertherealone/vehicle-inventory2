@@ -7,27 +7,54 @@ class CloudPricePredictor {
     }
 
     async initialize(database = 'motorcycles') {
+        const loadingOverlay = document.getElementById('loading-overlay');
+        const loadingText = loadingOverlay.querySelector('.loading-text');
+        const chunksProgress = document.getElementById('chunks-progress');
+        loadingText.textContent = `Loading ${database === 'cars' ? 'Cars' : 'Bikes'}...`;
+        loadingOverlay.classList.remove('hidden');
+    
         try {
             const vehiclesRef = db.collection(COLLECTION_NAME);
             const q = vehiclesRef.where('filename', '==', database);
             const querySnapshot = await q.get();
             
-            this.vehicles = [];
-            
+            if (querySnapshot.size === 0) {
+                console.log("No results found for database:", database);
+                return false;
+            }
+
+            const chunks = [];
             querySnapshot.forEach((doc) => {
-                const vehicleData = doc.data();
-                
-                if (!vehicleData || !vehicleData.data || !Array.isArray(vehicleData.data)) {
-                    console.warn(`Invalid document structure for doc ${doc.id}`);
-                    return;
+                const chunkData = doc.data();
+                if (chunkData && chunkData.data && Array.isArray(chunkData.data)) {
+                    chunks.push({
+                        chunkNumber: chunkData.chunkNumber,
+                        totalChunks: chunkData.totalChunks,
+                        data: chunkData.data
+                    });
+                } else {
+                    console.warn(`Invalid chunk data in document: ${doc.id}`);
                 }
-                
-                vehicleData.data.forEach((vehicle, index) => {
+            });
+    
+            chunks.sort((a, b) => a.chunkNumber - b.chunkNumber);
+            const expectedTotalChunks = chunks[0]?.totalChunks || 0;
+            if (chunks.length !== expectedTotalChunks) {
+                console.warn(`Warning: Found ${chunks.length} chunks but expected ${expectedTotalChunks}`);
+            }
+    
+            this.vehicles = [];
+    
+            chunks.forEach((chunk, index) => {
+                console.log(`Processing chunk ${chunk.chunkNumber} of ${chunk.totalChunks}`);
+                chunksProgress.textContent = `${index + 1}/${chunks.length}`;
+    
+                chunk.data.forEach((vehicle, vehicleIndex) => {
                     if (!vehicle) {
-                        console.log(`Warning: Empty vehicle at index ${index}`);
+                        console.log(`Warning: Empty vehicle at index ${vehicleIndex} in chunk ${chunk.chunkNumber}`);
                         return;
                     }
-                    
+    
                     const processedVehicle = {
                         Manufacturer: vehicle.Manufacturer || '',
                         Model: vehicle.Model || '',
@@ -37,19 +64,30 @@ class CloudPricePredictor {
                         "Mileage (km)": vehicle.Mileage || 'UNVERIFIED',
                         Condition: vehicle.Condition || ''
                     };
-                    
+    
                     this.vehicles.push(processedVehicle);
                 });
             });
-            
+    
             console.log(`Loaded ${this.vehicles.length} vehicles from database`);
-            return this.vehicles.length > 0;
+            
+            if (this.vehicles.length === 0) {
+                console.warn('Warning: No vehicles were processed successfully');
+                return false;
+            }
+    
+            console.log('Sample first vehicle:', this.vehicles[0]);
+            
+            return true;
+    
         } catch (error) {
             console.error('Error initializing predictor:', error);
             throw error;
+        } finally {
+            loadingOverlay.classList.add('hidden');
         }
     }
-
+    
     predict(targetMake, targetModel, targetYear, targetMileage) {
         const similarVehicles = this.getSimilarVehicles(targetMake, targetModel, targetYear, targetMileage, this.vehicles);
 
