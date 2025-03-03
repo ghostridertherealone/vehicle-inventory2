@@ -3,15 +3,15 @@ import { manufacturerCountries } from './manufacturerThemes.js';
 import { findModelYearRange } from './manufacturerThemes.js';
 let vehicles = [];
 let currentDatabase = 'motorcycles';
-let selectedModelDetails = new Map(); 
-let isModelsContentExpanded = false;
+let selectedModelDetails = new Map();
+let filterTimeout;
 
+const FILTER_DELAY = 800;
 const COLLECTION_NAME = 'asd32';
 
 async function initializeData() {
   const vehiclesRef = db.collection(COLLECTION_NAME);
   const q = vehiclesRef.where('filename', '==', currentDatabase);
-  const querySnapshot = await q.get();
 }
 
 initializeData();
@@ -21,65 +21,41 @@ async function loadDatabaseData(currentDatabase) {
     console.log("Starting database load for:", currentDatabase);
     
     const vehiclesRef = db.collection(COLLECTION_NAME);
-    
-
-    const allDocs = await vehiclesRef.get();
-    console.log("Total documents in collection:", allDocs.size);
-    
-
-    allDocs.forEach(doc => {
-      console.log("Found document with ID:", doc.id);
-      console.log("Document data:", JSON.stringify(doc.data(), null, 2));
-    });
-    
-
-    console.log("Attempting to filter for filename:", currentDatabase);
     const q = vehiclesRef.where('filename', '==', currentDatabase);
     const querySnapshot = await q.get();
-    console.log("Filtered results:", querySnapshot.size);
     
     if (querySnapshot.size === 0) {
-
-      console.log("No results found. Checking all filenames in collection:");
-      allDocs.forEach(doc => {
-        const data = doc.data();
-        console.log("Document filename:", data.filename);
-      });
-      
-
-      const qInsensitive = vehiclesRef.where('filename', '>=', currentDatabase.toLowerCase())
-                                    .where('filename', '<=', currentDatabase.toLowerCase() + '\uf8ff');
-      const insensitiveSnapshot = await qInsensitive.get();
-      console.log("Case-insensitive search results:", insensitiveSnapshot.size);
+      console.log("No results found for database:", currentDatabase);
+      return;
     }
     
     vehicles = [];
-    
+
+    const chunks = [];
     querySnapshot.forEach((doc) => {
-      const vehicleData = doc.data();
-      
-      if (!vehicleData) {
-        console.log("Warning: Empty document data for ID:", doc.id);
-        return;
+      const chunkData = doc.data();
+      if (chunkData && chunkData.data && Array.isArray(chunkData.data)) {
+        chunks.push({
+          chunkNumber: chunkData.chunkNumber,
+          totalChunks: chunkData.totalChunks,
+          data: chunkData.data
+        });
+      } else {
+        console.log("Warning: Invalid chunk data in document:", doc.id);
       }
+    });
+
+    chunks.sort((a, b) => a.chunkNumber - b.chunkNumber);
+
+    const chunksProgress = document.getElementById('chunks-progress');
+    
+    chunks.forEach((chunk, index) => {
+      console.log(`Processing chunk ${chunk.chunkNumber} of ${chunk.totalChunks}`);
+      chunksProgress.textContent = `${index + 1}/${chunks.length}`;
       
-      if (!vehicleData.data) {
-        console.log("Warning: No 'data' field in document:", doc.id);
-        console.log("Document structure:", Object.keys(vehicleData));
-        return;
-      }
-      
-      if (!Array.isArray(vehicleData.data)) {
-        console.log("Warning: 'data' is not an array in document:", doc.id);
-        console.log("Data type:", typeof vehicleData.data);
-        return;
-      }
-      
-      console.log(`Processing ${vehicleData.data.length} vehicles from document ${doc.id}`);
-      
-      vehicleData.data.forEach((vehicle, index) => {
+      chunk.data.forEach((vehicle, vehicleIndex) => {
         if (!vehicle) {
-          console.log(`Warning: Empty vehicle at index ${index}`);
+          console.log(`Warning: Empty vehicle at index ${vehicleIndex} in chunk ${chunk.chunkNumber}`);
           return;
         }
         
@@ -94,7 +70,6 @@ async function loadDatabaseData(currentDatabase) {
         };
         
         vehicles.push(processedVehicle);
-        console.log(`Added vehicle: ${processedVehicle.Manufacturer} ${processedVehicle.Model}`);
       });
     });
     
@@ -108,7 +83,7 @@ async function loadDatabaseData(currentDatabase) {
       .sort();
     
     console.log("Unique manufacturers found:", manufacturers);
-    
+
     selectedModelDetails.clear();
     document.getElementById("vehicle-list").innerHTML = '';
     
@@ -124,27 +99,30 @@ async function loadDatabaseData(currentDatabase) {
   }
 }
 
-function handleDatabaseToggle(event) {
+async function handleDatabaseToggle(event) {
   const database = event.target.checked ? 'cars' : 'motorcycles';
   currentDatabase = database;
-  
+
+  const loadingOverlay = document.getElementById('loading-overlay');
+  const loadingText = loadingOverlay.querySelector('.loading-text');
+  loadingText.textContent = `Loading ${database === 'cars' ? 'Cars' : 'Motorcycles'}...`;
+  loadingOverlay.classList.remove('hidden');
+
   selectedModelDetails.clear();
   document.getElementById('price-sort').value = '';
   document.getElementById('year-sort').value = '';
-  
   document.getElementById('vehicle-list').innerHTML = '';
-  document.getElementById('summary').innerHTML = '';
   
   const selectedModelsContainer = document.getElementById('selected-models');
   if (selectedModelsContainer) {
     selectedModelsContainer.innerHTML = '';
   }
   
-  loadDatabaseData(database);
-}
-
-function getMainModel(modelString) {
-  return modelString.split(' ')[0];
+  try {
+    await loadDatabaseData(database);
+  } finally {
+    loadingOverlay.classList.add('hidden');
+  }
 }
 
 function normalizeManufacturerName(name) {
@@ -179,23 +157,10 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 window.removeModel = function(model) {
-  const modelsContent = document.querySelector('.models-content');
-  isModelsContentExpanded = !modelsContent?.classList.contains('collapsed');
 
   selectedModelDetails.delete(model);
   updateSelectedModelsList();
   filterVehicles();
-  
-  const updatedModelsContent = document.querySelector('.models-content');
-  const toggleBtn = document.querySelector('.toggle-models-btn');
-  
-  if (isModelsContentExpanded && updatedModelsContent) {
-    updatedModelsContent.classList.remove('collapsed');
-    if (toggleBtn) toggleBtn.textContent = 'See less';
-  }
-  
-  const summaryCards = document.querySelectorAll('.summary-card');
-  summaryCards.forEach(card => card.classList.remove('active'));
 };
 
 function clearAllModels() {
@@ -216,11 +181,11 @@ function updateSelectedModelsList() {
     <div class="models-header">
       <span class="models-count">${selectedModelDetails.size} models selected</span>
       <div class="models-header-buttons">
-        ${selectedModelDetails.size > 0 ? '<button class="clear-all-btn">Clear all selections</button>' : ''}
-        <button class="toggle-models-btn">See all</button>
+        ${selectedModelDetails.size > 0 ? '<button class="clear-all-btn">Clear all</button>' : ''}
+        
       </div>
     </div>
-    <div class="models-content collapsed">
+    <div class="models-content">
       <div class="models-grid"></div>
     </div>
   `;
@@ -235,17 +200,8 @@ function updateSelectedModelsList() {
   selectedModelDetails.forEach((make, model) => {
     const chip = document.createElement("span");
     chip.className = "model-chip";
-    chip.innerHTML = `${make} ${model} <button class="remove-model" onclick="removeModel('${model}')">&times;</button>`;
+    chip.innerHTML = `${model} <button class="remove-model" onclick="removeModel('${model}')">&times;</button>`;
     modelsGrid.appendChild(chip);
-  });
-
-  const toggleBtn = selectedModelsContainer.querySelector('.toggle-models-btn');
-  const modelsContent = selectedModelsContainer.querySelector('.models-content');
-  
-  toggleBtn.addEventListener('click', () => {
-    const isCollapsed = modelsContent.classList.contains('collapsed');
-    modelsContent.classList.toggle('collapsed');
-    toggleBtn.textContent = isCollapsed ? 'See less' : 'See all';
   });
 
   selectedModelsContainer.style.display = selectedModelDetails.size > 0 ? 'block' : 'none';
@@ -269,7 +225,22 @@ function filterVehicles() {
            selectedModelDetails.get(vehicle.Model) === vehicle.Manufacturer;
   });
 
-  filteredVehicles = applyFilters(filteredVehicles);
+  const yearMin = parseInt(document.getElementById('year-min').value) || 0;
+  const yearMax = parseInt(document.getElementById('year-max').value) || Infinity;
+  const priceMin = parseInt(document.getElementById('price-min').value) || 0;
+  const priceMax = parseInt(document.getElementById('price-max').value) || Infinity;
+  const mileageMin = parseInt(document.getElementById('mileage-min').value) || 0;
+  const mileageMax = parseInt(document.getElementById('mileage-max').value) || Infinity;
+
+  filteredVehicles = filteredVehicles.filter(vehicle => {
+    const mileage = parseMileage(vehicle["Mileage"]) || 0;
+    return vehicle.Year >= yearMin &&
+           vehicle.Year <= yearMax &&
+           vehicle.Price >= priceMin &&
+           vehicle.Price <= priceMax &&
+           mileage >= mileageMin &&
+           (mileageMax === Infinity || mileage <= mileageMax);
+  });
 
   if (selectedPriceSort === 'low-high') {
     filteredVehicles.sort((a, b) => a.Price - b.Price);
@@ -301,32 +272,6 @@ function parseMileage(mileageStr) {
   return parseInt(mileageStr.toString().replace(/\s+/g, '').replace('km', ''));
 }
 
-function applyFilters(vehicles) {
-  const yearMin = document.getElementById('year-min').value;
-  const yearMax = document.getElementById('year-max').value;
-  const mileageMin = document.getElementById('mileage-min').value;
-  const mileageMax = document.getElementById('mileage-max').value;
-  const priceMin = document.getElementById('price-min').value;
-  const priceMax = document.getElementById('price-max').value;
-  
-  return vehicles.filter(vehicle => {
-    const year = parseInt(vehicle.Year);
-    const mileage = parseMileage(vehicle["Mileage"]);
-    const price = vehicle.Price;
-    
-    if (yearMin && year < parseInt(yearMin)) return false;
-    if (yearMax && year > parseInt(yearMax)) return false;
-
-    if (mileageMin && (!mileage || mileage < parseInt(mileageMin))) return false;
-    if (mileageMax && (!mileage || mileage > parseInt(mileageMax))) return false;
-    
-    if (priceMin && price < parseInt(priceMin)) return false;
-    if (priceMax && price > parseInt(priceMax)) return false;
-    
-    return true;
-  });
-}
-
 function getLogoPath(manufacturer) {
   const logoFolder = currentDatabase === 'motorcycles' ? 'Logos-bike' : 'Logos-car';
   return `${logoFolder}/${manufacturer}.png`;
@@ -347,6 +292,52 @@ function getModelImagePath(vehicle) {
 function displayVehicles(vehicles) {
   const vehicleList = document.getElementById("vehicle-list");
   vehicleList.innerHTML = '';
+
+  if (vehicles.length === 0) {
+    const noResultsDiv = document.createElement("div");
+    noResultsDiv.className = "no-results";
+    
+    const hasActiveFilters = [
+      'year-min', 'year-max', 'mileage-min', 
+      'mileage-max', 'price-min', 'price-max'
+    ].some(id => document.getElementById(id).value !== '');
+    
+    const searchQuery = document.querySelector('.search-input').value.trim();
+    
+if (hasActiveFilters) {
+      noResultsDiv.innerHTML = `
+        <div class="no-results-content">
+          <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="19" y1="5" x2="5" y2="19"></line>
+            <circle cx="6.5" cy="6.5" r="2.5"></circle>
+            <circle cx="17.5" cy="17.5" r="2.5"></circle>
+          </svg>
+          <h3>No matches with current filters</h3>
+          <p>Try adjusting your filters to see more results</p>
+          <button id="clear-filters-btn" class="clear-filters-button">Clear all filters</button>
+        </div>
+      `;
+      
+      setTimeout(() => {
+        const clearFiltersBtn = document.getElementById('clear-filters-btn');
+        if (clearFiltersBtn) {
+          clearFiltersBtn.addEventListener('click', () => {
+            document.getElementById('year-min').value = '';
+            document.getElementById('year-max').value = '';
+            document.getElementById('mileage-min').value = '';
+            document.getElementById('mileage-max').value = '';
+            document.getElementById('price-min').value = '';
+            document.getElementById('price-max').value = '';
+            filterVehicles();
+          });
+        }
+      }, 0);
+    }
+    
+    vehicleList.appendChild(noResultsDiv);
+    return;
+  }
+
 
   vehicles.forEach(vehicle => {
     const vehicleDiv = document.createElement("div");
@@ -414,27 +405,18 @@ function displayVehicles(vehicles) {
 }
 
 document.addEventListener('DOMContentLoaded', function() {
+  setupFilterControls();
   document.getElementById('database-toggle').addEventListener('change', handleDatabaseToggle);
   document.getElementById("price-sort").addEventListener("change", filterVehicles);
   document.getElementById("year-sort").addEventListener("change", filterVehicles);
-  document.getElementById('apply-filters').addEventListener('click', filterVehicles);
   document.getElementById("mileage-sort").addEventListener("change", filterVehicles);
-  document.getElementById('clear-filters').addEventListener('click', function() {
-    document.getElementById('year-min').value = '';
-    document.getElementById('year-max').value = '';
-    document.getElementById('mileage-min').value = '';
-    document.getElementById('mileage-max').value = '';
-    document.getElementById('price-min').value = '';
-    document.getElementById('price-max').value = '';
-    filterVehicles();
-  });
-
+  
   const yearInputs = [document.getElementById('year-min'), document.getElementById('year-max')];
   yearInputs.forEach(input => {
     input.addEventListener('change', function() {
       let value = parseInt(this.value);
       if (value < 1900) this.value = 1900;
-      if (value > 2024) this.value = 2024;
+      if (value > 2025) this.value = 2025;
     });
   });
 
@@ -445,21 +427,41 @@ document.addEventListener('DOMContentLoaded', function() {
   document.addEventListener('click', (e) => {
     if (!searchContainer.contains(e.target)) {
       searchResults.innerHTML = '';
-      searchInput.value = '';
     }
   });
 
   searchInput.addEventListener('input', () => {
     const query = searchInput.value.toLowerCase().trim();
-    if (!query) {
-      searchResults.innerHTML = '';
-      return;
+    
+    let filteredVehicles = vehicles;
+    
+    if (query) {
+      filteredVehicles = vehicles.filter(vehicle =>
+        vehicle.Model.toLowerCase().includes(query) ||
+        vehicle.Manufacturer.toLowerCase().includes(query)
+      );
     }
   
-    const filteredVehicles = vehicles.filter(vehicle =>
-      vehicle.Model.toLowerCase().includes(query) ||
-      vehicle.Manufacturer.toLowerCase().includes(query)
-    );
+    searchResults.innerHTML = '';
+    
+    if (filteredVehicles.length === 0 && query) {
+      const noResultsDiv = document.createElement('div');
+      noResultsDiv.className = 'no-results';
+      noResultsDiv.innerHTML = `
+        <div class="no-results-content">
+          <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            <line x1="8" y1="11" x2="14" y2="11"></line>
+          </svg>
+          <h3>No matches found</h3>
+          <p>We couldn't find any ${currentDatabase === 'cars' ? 'cars' : 'motorcycles'} matching "${query}"</p>
+          <p>Double check your spelling and letter spacing.</p>
+        </div>
+      `;
+      searchResults.appendChild(noResultsDiv);
+      return;
+    }
   
     const groupedByManufacturer = {};
     filteredVehicles.forEach(vehicle => {
@@ -481,19 +483,31 @@ document.addEventListener('DOMContentLoaded', function() {
         groupedByManufacturer[vehicle.Manufacturer].get(mainModel).add(mainModel);
       }
     });
-  
-    searchResults.innerHTML = '';
-  
-    Object.entries(groupedByManufacturer).forEach(([manufacturer, modelGroups]) => {
+
+  const sortedManufacturers = Object.entries(groupedByManufacturer).sort((a, b) => 
+    a[0].localeCompare(b[0], undefined, { sensitivity: 'base' })
+  );
+
+  sortedManufacturers.forEach(([manufacturer, modelGroups]) => {
       const manufacturerDiv = document.createElement('div');
       manufacturerDiv.className = 'manufacturer-group';
   
       const manufacturerHeader = document.createElement('div');
       manufacturerHeader.className = 'manufacturer-header';
-  
+
+      const headerLeftContent = document.createElement('div');
+      headerLeftContent.className = 'manufacturer-header-left';
+      
       const manufacturerCheckbox = document.createElement('input');
       manufacturerCheckbox.type = 'checkbox';
       manufacturerCheckbox.className = 'manufacturer-checkbox';
+      
+      const allModelsFromManufacturer = Array.from(modelGroups.values())
+        .flatMap(subModels => Array.from(subModels));
+      const allSelected = allModelsFromManufacturer
+        .every(model => selectedModelDetails.has(model) && 
+               selectedModelDetails.get(model) === manufacturer);
+      manufacturerCheckbox.checked = allSelected;
       
       const manufacturerLabel = document.createElement('span');
       manufacturerLabel.textContent = manufacturer;
@@ -502,14 +516,28 @@ document.addEventListener('DOMContentLoaded', function() {
       expandButton.className = 'expand-button';
       expandButton.textContent = '▼';
       
+
+headerLeftContent.appendChild(manufacturerCheckbox);
+headerLeftContent.appendChild(manufacturerLabel);
+manufacturerHeader.appendChild(expandButton);
+manufacturerHeader.appendChild(headerLeftContent);
+
+
+const manufacturerLogo = document.createElement('img');
+manufacturerLogo.className = 'search-manufacturer-logo';
+manufacturerLogo.src = getLogoPath(manufacturer);
+manufacturerLogo.alt = `${manufacturer} logo`;
       manufacturerHeader.appendChild(manufacturerCheckbox);
       manufacturerHeader.appendChild(manufacturerLabel);
+      manufacturerHeader.appendChild(manufacturerLogo);
       manufacturerHeader.appendChild(expandButton);
       manufacturerDiv.appendChild(manufacturerHeader);
-  
+
       const modelsContainer = document.createElement('div');
       modelsContainer.className = 'models-container';
-
+      modelsContainer.style.display = query ? 'block' : 'none';
+      expandButton.textContent = query ? '▲' : '▼';
+  
       manufacturerHeader.addEventListener('click', (e) => {
         if (e.target !== manufacturerCheckbox) {
           manufacturerCheckbox.checked = !manufacturerCheckbox.checked;
@@ -518,7 +546,11 @@ document.addEventListener('DOMContentLoaded', function() {
         }
       });
   
-      modelGroups.forEach((subModels, mainModel) => {
+    const sortedMainModels = Array.from(modelGroups.entries()).sort((a, b) => 
+      a[0].localeCompare(b[0], undefined, { sensitivity: 'base' })
+    );
+
+    sortedMainModels.forEach(([mainModel, subModels]) => {
         const modelGroupDiv = document.createElement('div');
         modelGroupDiv.className = 'model-group';
   
@@ -529,13 +561,18 @@ document.addEventListener('DOMContentLoaded', function() {
         modelCheckbox.type = 'checkbox';
         modelCheckbox.className = 'model-checkbox';
         
+        const allSubModelsSelected = Array.from(subModels)
+          .every(model => selectedModelDetails.has(model) && 
+                 selectedModelDetails.get(model) === manufacturer);
+        modelCheckbox.checked = allSubModelsSelected;
+        
         const modelLabel = document.createElement('span');
         modelLabel.textContent = mainModel;
         
         modelHeader.appendChild(modelCheckbox);
         modelHeader.appendChild(modelLabel);
         modelGroupDiv.appendChild(modelHeader);
-
+  
         modelHeader.addEventListener('click', (e) => {
           if (e.target !== modelCheckbox) {
             modelCheckbox.checked = !modelCheckbox.checked;
@@ -547,7 +584,11 @@ document.addEventListener('DOMContentLoaded', function() {
         const subModelsDiv = document.createElement('div');
         subModelsDiv.className = 'sub-models';
   
-        subModels.forEach(subModel => {
+const sortedSubModels = Array.from(subModels).sort((a, b) => 
+  a.localeCompare(b, undefined, { sensitivity: 'base' })
+);
+
+sortedSubModels.forEach(subModel => {
           if (subModel !== mainModel) {
             const subModelDiv = document.createElement('div');
             subModelDiv.className = 'sub-model';
@@ -555,6 +596,9 @@ document.addEventListener('DOMContentLoaded', function() {
             const subModelCheckbox = document.createElement('input');
             subModelCheckbox.type = 'checkbox';
             subModelCheckbox.className = 'sub-model-checkbox';
+
+            subModelCheckbox.checked = selectedModelDetails.has(subModel) && 
+                                     selectedModelDetails.get(subModel) === manufacturer;
             
             const subModelLabel = document.createElement('span');
             subModelLabel.textContent = subModel;
@@ -562,7 +606,7 @@ document.addEventListener('DOMContentLoaded', function() {
             subModelDiv.appendChild(subModelCheckbox);
             subModelDiv.appendChild(subModelLabel);
             subModelsDiv.appendChild(subModelDiv);
-
+  
             subModelDiv.addEventListener('click', (e) => {
               if (e.target !== subModelCheckbox) {
                 subModelCheckbox.checked = !subModelCheckbox.checked;
@@ -570,7 +614,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 subModelCheckbox.dispatchEvent(event);
               }
             });
-
+  
             subModelCheckbox.addEventListener('change', () => {
               if (subModelCheckbox.checked) {
                 selectedModelDetails.set(subModel, manufacturer);
@@ -585,7 +629,7 @@ document.addEventListener('DOMContentLoaded', function() {
   
         modelGroupDiv.appendChild(subModelsDiv);
         modelsContainer.appendChild(modelGroupDiv);
-
+  
         modelCheckbox.addEventListener('change', () => {
           const subModelCheckboxes = subModelsDiv.querySelectorAll('.sub-model-checkbox');
           subModelCheckboxes.forEach(checkbox => {
@@ -604,7 +648,7 @@ document.addEventListener('DOMContentLoaded', function() {
   
       manufacturerDiv.appendChild(modelsContainer);
       searchResults.appendChild(manufacturerDiv);
-
+  
       manufacturerCheckbox.addEventListener('change', () => {
         const allModelCheckboxes = modelsContainer.querySelectorAll('.model-checkbox, .sub-model-checkbox');
         allModelCheckboxes.forEach(checkbox => {
@@ -619,7 +663,7 @@ document.addEventListener('DOMContentLoaded', function() {
         updateSelectedModelsList();
         filterVehicles();
       });
-
+  
       expandButton.addEventListener('click', (e) => {
         e.stopPropagation();
         modelsContainer.style.display = modelsContainer.style.display === 'none' ? 'block' : 'none';
@@ -627,6 +671,88 @@ document.addEventListener('DOMContentLoaded', function() {
       });
     });
   });
+  
+  searchInput.addEventListener('focus', () => {
+    const event = new Event('input');
+    searchInput.dispatchEvent(event);
+  });
 });
+
+const backToTopButton = document.getElementById('backToTop');
+
+window.addEventListener('scroll', () => {
+  if (window.pageYOffset > 300) {
+    backToTopButton.style.display = 'block';
+  } else {
+    backToTopButton.style.display = 'none';
+  }
+});
+
+backToTopButton.addEventListener('click', () => {
+  window.scrollTo({
+    top: 0,
+    behavior: 'smooth'
+  });
+});
+function setupFilterControls() {
+  const filterInputs = [
+    'year-min', 'year-max',
+    'mileage-min', 'mileage-max',
+    'price-min', 'price-max'
+  ].map(id => document.getElementById(id));
+  
+  const statusIndicator = document.createElement('div');
+  statusIndicator.className = 'filter-status';
+  statusIndicator.style.display = 'none';
+  filterInputs[filterInputs.length - 1].parentNode.appendChild(statusIndicator);
+
+  filterInputs.forEach(input => {
+    let originalValue = input.value;
+    
+    input.addEventListener('input', () => {
+      clearTimeout(filterTimeout);
+      statusIndicator.textContent = 'Typing...';
+      statusIndicator.style.display = 'block';
+      input.classList.add('filter-modified');
+      
+      filterTimeout = setTimeout(() => {
+        filterVehicles();
+        statusIndicator.style.display = 'none';
+      }, FILTER_DELAY);
+    });
+    
+    input.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        clearTimeout(filterTimeout);
+        filterVehicles();
+        statusIndicator.style.display = 'none';
+      }
+    });
+    
+    input.addEventListener('blur', () => {
+      clearTimeout(filterTimeout);
+      filterVehicles();
+      statusIndicator.style.display = 'none';
+    });
+    
+    input.dataset.originalValue = originalValue;
+  });
+  
+  document.querySelectorAll('.clear-range-button').forEach(button => {
+    button.addEventListener('click', (e) => {
+      const rangeDiv = e.target.closest('div');
+      const inputs = rangeDiv.querySelectorAll('input');
+      inputs.forEach(input => {
+        input.value = '';
+        input.classList.remove('filter-modified');
+      });
+      filterVehicles();
+    });
+  });
+
+  document.getElementById("price-sort").addEventListener("change", filterVehicles);
+  document.getElementById("year-sort").addEventListener("change", filterVehicles);
+  document.getElementById("mileage-sort").addEventListener("change", filterVehicles);
+}
 
 loadDatabaseData('motorcycles');
