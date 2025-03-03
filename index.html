@@ -8,7 +8,14 @@
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 </head>
-<body>
+<div id="loading-overlay" class="loading-overlay hidden">
+  <div class="spinner-container">
+    <div class="spinner"></div>
+    <p class="loading-text">Loading...</p>
+    <p class="loading-progress">Processed: <span id="chunks-progress">0/0</span> chunks</p>
+  </div>
+</div>
+<body> 
   <div class="page-layout">
     <aside class="sidebar">
       <div id="selected-models">
@@ -18,23 +25,28 @@
         <div class="sort-panel">
           <div class="sort-options">
             <div class="sort-group">
-              <label for="price-sort">Price Sort:</label>
+              <label for="price-sort">Price Sort</label>
+              <button class="clear-sort-button" type="button" aria-label="Clear price sort">×</button>
               <select id="price-sort" onchange="filterVehicles()">
                 <option value="">--Select Price Sort--</option>
                 <option value="low-high">Price (Low to High)</option>
                 <option value="high-low">Price (High to Low)</option>
               </select>
             </div>
+            
             <div class="sort-group">
-              <label for="year-sort">Year Sort:</label>
+              <label for="year-sort">Year Sort</label>
+              <button class="clear-sort-button" type="button" aria-label="Clear year sort">×</button>
               <select id="year-sort" onchange="filterVehicles()">
                 <option value="">--Select Year Sort--</option>
                 <option value="new-old">Year (Newest to Oldest)</option>
                 <option value="old-new">Year (Oldest to Newest)</option>
               </select>
             </div>
+            
             <div class="sort-group">
-              <label for="mileage-sort">Mileage Sort:</label>
+              <label for="mileage-sort">Mileage Sort</label>
+              <button class="clear-sort-button" type="button" aria-label="Clear mileage sort">×</button>
               <select id="mileage-sort" onchange="filterVehicles()">
                 <option value="">--Select Mileage Sort--</option>
                 <option value="low-high">Mileage (Low to High)</option>
@@ -47,33 +59,33 @@
         <div class="filter-panel">
           <div class="year-mileage-filters">
             <div class="year-range">
-              <label for="year-min">Year Range:</label>
+              <label for="year-min">Year Range</label>
+              <button class="clear-range-button" type="button" aria-label="Clear year range">×</button>
               <div class="range-inputs">
-                <input type="number" id="year-min" placeholder="From" min="1900" max="2024">
-                <span>to</span>
-                <input type="number" id="year-max" placeholder="To" min="1900" max="2024">
+                <input type="number" id="year-min" placeholder="Minimum" min="1900" max="2024">
+                <span>-</span>
+                <input type="number" id="year-max" placeholder="Maximum" min="1900" max="2024">
               </div>
             </div>
             
             <div class="mileage-range">
-              <label for="mileage-min">Mileage Range (km):</label>
+              <label for="mileage-min">Mileage Range (km)</label>
+              <button class="clear-range-button" type="button" aria-label="Clear mileage range">×</button>
               <div class="range-inputs">
-                <input type="number" id="mileage-min" placeholder="From" min="0">
-                <span>to</span>
-                <input type="number" id="mileage-max" placeholder="To" min="0">
+                <input type="number" id="mileage-min" placeholder="Minimum" min="0">
+                <span>-</span>
+                <input type="number" id="mileage-max" placeholder="Maximum" min="0">
               </div>
             </div>
+            
             <div class="price-range">
               <label>Price Range (R)</label>
+              <button class="clear-range-button" type="button" aria-label="Clear price range">×</button>
               <div class="range-inputs">
-                <input type="number" id="price-min" placeholder="Min">
-                <span>to</span>
-                <input type="number" id="price-max" placeholder="Max">
+                <input type="number" id="price-min" placeholder="Minimum">
+                <span>-</span>
+                <input type="number" id="price-max" placeholder="Maximum">
               </div>
-            </div>       
-            <div class="filter-actions">
-              <button id="apply-filters" class="filter-button">Apply</button>
-              <button id="clear-filters" class="filter-button">Clear</button>
             </div>
           </div>
         </div>
@@ -111,17 +123,31 @@
       <div class="vehicle-list" id="vehicle-list"></div>
     </main>
   </div>
+<footer class="site-footer">
+  <div class="footer-content">
+    <div class="footer-column">
+      <h3>Connect With Me</h3>
+      <ul>
+        <li><a href="mailto:hubertus@botnition.com">hubertus@botnition.com</a></li>
+        <li><a href="https://www.youtube.com/@botnition" target="_blank">YouTube Channel</a></li>
+        <li><a href="https://www.linkedin.com/in/botnition/" target="_blank">LinkedIn Profile</a></li>
+      </ul>
+    </div>
+  </div>
+</footer>
+
+<button id="backToTop" class="back-to-top" aria-label="Back to top">↑</button>
 
   <div class="page-transition"></div>
   <script>
-const firebaseConfig = {
-  apiKey: "AIzaSyDZkmi7vcHUBhVAFUUsYzpkgsasn_cjURQ",
-  authDomain: "vehicle-api-448509.firebaseapp.com",
-  projectId: "vehicle-api-448509",
-  storageBucket: "vehicle-api-448509.firebasestorage.app",
-  messagingSenderId: "25669789058",
-  appId: "1:25669789058:web:0dfef7716b9201621e5b9b",
-  measurementId: "G-P5700P1SC4"
+        const firebaseConfig = {
+        apiKey: "AIzaSyDZkmi7vcHUBhVAFUUsYzpkgsasn_cjURQ",
+        authDomain: "vehicle-api-448509.firebaseapp.com",
+        projectId: "vehicle-api-448509",
+        storageBucket: "vehicle-api-448509.firebasestorage.app",
+        messagingSenderId: "25669789058",
+        appId: "1:25669789058:web:0dfef7716b9201621e5b9b",
+        measurementId: "G-P5700P1SC4"
 };
     firebase.initializeApp(firebaseConfig);
     window.db = firebase.firestore();
