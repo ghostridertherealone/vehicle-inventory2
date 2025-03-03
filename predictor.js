@@ -264,6 +264,7 @@ document.addEventListener('DOMContentLoaded', function() {
         currentDatabase = database;
         loadDatabaseData(database);
     });
+    
 });
 
 document.getElementById('page-toggle').addEventListener('change', function() {
